@@ -16,32 +16,35 @@ const value = (formData: FormData, key: string) => {
 
 export async function registerAction(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
   const parsed = registerSchema.safeParse({
-    name: value(formData, "name"),
+    loginId: value(formData, "loginId"),
     email: value(formData, "email"),
     password: value(formData, "password"),
     confirmPassword: value(formData, "confirmPassword"),
   });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors, message: "Please fix the highlighted fields." };
 
-  const existing = await db.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } });
-  if (existing) return { errors: { email: ["An account with this email already exists."] }, message: "Use a different email address or log in." };
+  const existingEmail = await db.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } });
+  if (existingEmail) return { errors: { email: ["An account with this email already exists."] }, message: "Use a different email address or log in." };
+
+  const existingLoginId = await db.user.findUnique({ where: { loginId: parsed.data.loginId }, select: { id: true } });
+  if (existingLoginId) return { errors: { loginId: ["An account with this Login ID already exists."] }, message: "Use a different Login ID." };
 
   await db.user.create({
     data: {
-      name: parsed.data.name,
+      loginId: parsed.data.loginId,
       email: parsed.data.email,
       passwordHash: await bcrypt.hash(parsed.data.password, 10),
     },
   });
-  await signIn("credentials", { email: parsed.data.email, password: parsed.data.password, redirectTo: "/dashboard" });
+  await signIn("credentials", { loginId: parsed.data.loginId, password: parsed.data.password, redirectTo: "/dashboard" });
   return {};
 }
 
 export async function loginAction(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
-  const parsed = loginSchema.safeParse({ email: value(formData, "email"), password: value(formData, "password") });
+  const parsed = loginSchema.safeParse({ loginId: value(formData, "loginId"), password: value(formData, "password") });
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors, message: "Please fix the highlighted fields." };
   try {
-    await signIn("credentials", { email: parsed.data.email, password: parsed.data.password, redirectTo: "/dashboard" });
+    await signIn("credentials", { loginId: parsed.data.loginId, password: parsed.data.password, redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) return { message: "Invalid email or password." };
     throw error;

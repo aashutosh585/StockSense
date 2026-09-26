@@ -36,23 +36,23 @@ export function RegisterForm() {
       <form action={formAction} className="space-y-4" noValidate>
         <div className="space-y-1.5">
           <label
-            htmlFor="name"
+            htmlFor="loginId"
             className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
           >
-            Name
+            Enter Login Id
           </label>
           <input
-            id="name"
-            name="name"
+            id="loginId"
+            name="loginId"
             type="text"
-            autoComplete="name"
-            placeholder="John Doe"
+            autoComplete="username"
+            placeholder="johndoe123"
             className="form-input"
-            aria-describedby="name-error"
+            aria-describedby="loginId-error"
           />
-          {state.errors?.name ? (
-            <p id="name-error" className="text-xs text-red-500 font-medium mt-1">
-              {state.errors.name[0]}
+          {state.errors?.loginId ? (
+            <p id="loginId-error" className="text-xs text-red-500 font-medium mt-1">
+              {state.errors.loginId[0]}
             </p>
           ) : null}
         </div>

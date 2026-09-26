@@ -9,7 +9,7 @@ const passwordSchema = z
   .regex(/[^A-Za-z0-9]/, "Password must include a special character.");
 
 export const registerSchema = z.object({
-  name: z.string().trim().min(1, "Name is required.").max(100, "Name is too long."),
+  loginId: z.string().trim().min(6, "Login ID must be at least 6 characters.").max(12, "Login ID cannot exceed 12 characters."),
   email: z.string().trim().email("Enter a valid email address.").transform((email) => email.toLowerCase()),
   password: passwordSchema,
   confirmPassword: z.string(),
@@ -18,6 +18,6 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address.").transform((email) => email.toLowerCase()),
+  loginId: z.string().trim().min(1, "Login ID is required."),
   password: z.string().min(1, "Password is required."),
 });

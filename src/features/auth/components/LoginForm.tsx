@@ -21,7 +21,7 @@ function SubmitButton() {
   return (
     <Button type="submit" variant="glow" className="w-full h-11 rounded-xl cursor-pointer" disabled={pending}>
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-      {pending ? "Logging in..." : "Login"}
+      {pending ? "Signing in..." : "SIGN IN"}
     </Button>
   );
 }
@@ -35,23 +35,23 @@ export function LoginForm() {
       <form action={formAction} className="space-y-4" noValidate>
         <div className="space-y-1.5">
           <label
-            htmlFor="email"
+            htmlFor="loginId"
             className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
           >
-            Email
+            Login Id
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            placeholder="name@example.com"
+            id="loginId"
+            name="loginId"
+            type="text"
+            autoComplete="username"
+            placeholder="johndoe123"
             className="form-input"
-            aria-describedby="email-error"
+            aria-describedby="loginId-error"
           />
-          {state.errors?.email ? (
-            <p id="email-error" className="text-xs text-red-500 font-medium mt-1">
-              {state.errors.email[0]}
+          {state.errors?.loginId ? (
+            <p id="loginId-error" className="text-xs text-red-500 font-medium mt-1">
+              {state.errors.loginId[0]}
             </p>
           ) : null}
         </div>

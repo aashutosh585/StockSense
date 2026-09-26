@@ -31,16 +31,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
-      name: "Email and password",
+      name: "Login ID and password",
       credentials: {
-        email: { label: "Email", type: "email" },
+        loginId: { label: "Login ID", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await db.user.findUnique({ where: { email: parsed.data.email } });
+        const user = await db.user.findUnique({ where: { loginId: parsed.data.loginId } });
         if (!user?.passwordHash) return null;
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
