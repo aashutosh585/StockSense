@@ -270,7 +270,7 @@ sequenceDiagram
    - This prevents key decryption conflicts when developing multiple NextAuth applications on `http://localhost:3000`.
 3. **Password Security**:
    - Passwords must satisfy complexity constraints: minimum 8 characters, at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
-   - Hashed using `bcryptjs` with salt round cost factor 12. Plaintext passwords are never persisted.
+   - Hashed using `bcryptjs` with salt round cost factor 10 (OWASP standard). Plaintext passwords are never persisted.
 4. **Brute-Force & Account Enumeration Prevention**:
    - Credential sign-in errors return generic messages (`"Invalid email or password."`) to prevent user enumeration attacks.
 5. **Cookie Security Options**:
@@ -322,3 +322,174 @@ StockSense/
         │   └── db.ts                             # Prisma client singleton & connection pool
         └── utils.ts                              # Tailwind cn() merge utility
 ```
+
+---
+
+## 7. Testing Guide: Postman (Backend API) & Browser (Frontend)
+
+The current system supports testing through **both** Postman (REST API) and Web Browsers (Frontend UI).
+
+### 7.1 Backend API Testing in Postman
+
+Auth.js / NextAuth v5 automatically mounts REST API endpoints under `/api/auth/*` through [`src/app/api/auth/[...nextauth]/route.ts`](file:///a:/Ashutosh%20Maurya/YT%20web%20D/Hackathon/StockSense/src/app/api/auth/%5B...nextauth%5D/route.ts). You can execute the entire authentication lifecycle in Postman:
+
+#### Request 1: Get CSRF Token
+NextAuth requires a CSRF token for state-changing authentication requests (login and signout).
+
+- **Method**: `GET`
+- **URL**: `http://localhost:3000/api/auth/csrf`
+- **Response** (`200 OK`):
+  ```json
+  {
+    "csrfToken": "a1b2c3d4e5f6..."
+  }
+  ```
+- **Postman Tip**: In Postman's **Tests** tab, automatically save this token into a collection variable:
+  ```javascript
+  const res = pm.response.json();
+  pm.collectionVariables.set("csrfToken", res.csrfToken);
+  ```
+
+---
+
+#### Request 2: Check Available Providers
+Inspect all configured authentication providers.
+
+- **Method**: `GET`
+- **URL**: `http://localhost:3000/api/auth/providers`
+- **Response** (`200 OK`):
+  ```json
+  {
+    "google": {
+      "id": "google",
+      "name": "Google",
+      "type": "oauth",
+      "signinUrl": "http://localhost:3000/api/auth/signin/google",
+      "callbackUrl": "http://localhost:3000/api/auth/callback/google"
+    },
+    "credentials": {
+      "id": "credentials",
+      "name": "Email and password",
+      "type": "credentials",
+      "signinUrl": "http://localhost:3000/api/auth/signin/credentials",
+      "callbackUrl": "http://localhost:3000/api/auth/callback/credentials"
+    }
+  }
+  ```
+
+---
+
+#### Request 3: Login with Email & Password (Credentials)
+Authenticate an existing user via the REST callback.
+
+- **Method**: `POST`
+- **URL**: `http://localhost:3000/api/auth/callback/credentials`
+- **Headers**:
+  - `Content-Type`: `application/x-www-form-urlencoded`
+- **Body** (`x-www-form-urlencoded`):
+  | Key | Value | Description |
+  |---|---|---|
+  | `email` | `test@example.com` | Registered user email |
+  | `password` | `Password123!` | User password |
+  | `csrfToken` | `{{csrfToken}}` | CSRF token from Request 1 |
+  | `json` | `true` | Tells NextAuth to return a JSON response |
+
+- **Response** (`200 OK`):
+  ```json
+  {
+    "url": "http://localhost:3000/dashboard"
+  }
+  ```
+- **Cookies Set**:
+  Postman automatically stores the session cookie:
+  ```
+  stocksense.session-token = <encrypted-JWE-token>; Path=/; HttpOnly; SameSite=Lax
+  ```
+
+---
+
+#### Request 4: Verify Active Session
+Check whether the client is currently authenticated and retrieve session details.
+
+- **Method**: `GET`
+- **URL**: `http://localhost:3000/api/auth/session`
+- **Headers**:
+  - Sent automatically by Postman's Cookie jar (or pass `Cookie: stocksense.session-token=<token>`).
+- **Response (Authenticated - `200 OK`)**:
+  ```json
+  {
+    "user": {
+      "id": "cm8abc123xyz...",
+      "name": "John Doe",
+      "email": "test@example.com",
+      "image": null
+    },
+    "expires": "2026-10-26T07:15:00.000Z"
+  }
+  ```
+- **Response (Unauthenticated - `200 OK`)**:
+  ```json
+  {}
+  ```
+
+---
+
+#### Request 5: Sign Out (Logout)
+Invalidate the session and clear the session cookie.
+
+- **Method**: `POST`
+- **URL**: `http://localhost:3000/api/auth/signout`
+- **Headers**:
+  - `Content-Type`: `application/x-www-form-urlencoded`
+- **Body** (`x-www-form-urlencoded`):
+  | Key | Value |
+  |---|---|
+  | `csrfToken` | `{{csrfToken}}` |
+  | `json` | `true` |
+
+- **Response** (`200 OK`):
+  ```json
+  {
+    "url": "http://localhost:3000"
+  }
+  ```
+- Postman clears `stocksense.session-token`. Calling `/api/auth/session` now returns `{}`.
+
+---
+
+#### Request 6: Testing User Registration from Postman
+In the Dino_Mate architecture, registration is powered by a Next.js Server Action (`registerAction` in `src/features/auth/actions/auth.ts`) which accepts `FormData`.
+
+To invoke it directly from Postman:
+- **Method**: `POST`
+- **URL**: `http://localhost:3000/register`
+- **Headers**:
+  - `Next-Action`: `<action-id>` *(Find this ID in browser DevTools > Network tab when submitting the register form once)*
+  - `Accept`: `text/x-component`
+- **Body** (`form-data`):
+  - `name`: `Jane Doe`
+  - `email`: `jane@example.com`
+  - `password`: `Password123!`
+  - `confirmPassword`: `Password123!`
+
+---
+
+### 7.2 Frontend Browser Testing Workflow
+
+Test all client-side authentication features at `http://localhost:3000`:
+
+| Step | Page / Action | Test Case | Expected Behavior |
+|---|---|---|---|
+| **1** | `/register` | Empty form submission | Shows inline validation errors ("Name is required", "Enter a valid email address", "Password must be at least 8 characters"). |
+| **2** | `/register` | Password strength test | Type short password → bar turns Red ("Weak"). Add uppercase + number + symbol → bar turns Emerald Green ("Strong"). |
+| **3** | `/register` | Mismatched passwords | Enter different passwords → displays "Passwords do not match." error. |
+| **4** | `/register` | Valid submission | Creates user in Neon DB with bcrypt hash, auto-signs in, and redirects directly to `/dashboard`. |
+| **5** | `/register` | Duplicate registration | Submitting with an existing email returns: "An account with this email already exists." |
+| **6** | `/login` | Invalid credentials | Displays red banner: "Invalid email or password." |
+| **7** | `/login` | Show/Hide password | Eye toggle icon switches input between masked dots and readable plaintext. |
+| **8** | `/login` | Successful credentials login | Redirects to `/dashboard` with user session data displayed. |
+| **9** | `/login` | "Continue with Google" | Opens Google consent screen, returns to `/api/auth/callback/google`, links account, redirects to `/dashboard`. |
+| **10** | Route Guarding | Access `/login` while logged in | Server Component detects active session and immediately redirects to `/dashboard`. |
+| **11** | Route Guarding | Access `/dashboard` while logged out | Server Component detects absence of session and immediately redirects to `/login`. |
+| **12** | `/dashboard` | Click "Logout" | Submits `logoutAction`, destroys `stocksense.session-token` cookie, and safely redirects to home `/`. |
+
