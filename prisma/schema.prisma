@@ -23,6 +23,7 @@ model User {
   // Relationships
   accounts      Account[]
   sessions      Session[]
+  stockMoves    StockMove[]
 }
 
 /// OAuth Account details linked to user profile
@@ -66,4 +67,102 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// -----------------------------------------------------------------------------
+// CORE INVENTORY SYSTEM MODELS
+// -----------------------------------------------------------------------------
+
+model Warehouse {
+  id        String     @id @default(cuid())
+  name      String
+  shortCode String     @unique
+  address   String?
+  locations Location[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Location {
+  id          String      @id @default(cuid())
+  name        String
+  shortCode   String
+  warehouseId String?
+  warehouse   Warehouse?  @relation(fields: [warehouseId], references: [id])
+  type        String      @default("internal") // internal, vendor, customer, loss
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  movesFrom StockMove[] @relation("LocationFrom")
+  movesTo   StockMove[] @relation("LocationTo")
+
+  @@unique([warehouseId, shortCode])
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  sku         String     @unique
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id])
+  unitCost    Float      @default(0)
+  onHand      Int        @default(0)
+  freeToUse   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  moveLines   StockMoveLine[]
+}
+
+model Contact {
+  id        String      @id @default(cuid())
+  name      String
+  email     String?
+  type      String      @default("vendor") // vendor, customer
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  moves     StockMove[]
+}
+
+model StockMove {
+  id              String   @id @default(cuid())
+  reference       String   @unique // e.g., WH/IN/0001
+  type            String   // receipt, delivery, transfer, adjustment
+  status          String   @default("draft") // draft, waiting, ready, done
+  scheduleDate    DateTime
+  
+  contactId       String?
+  contact         Contact? @relation(fields: [contactId], references: [id])
+  
+  fromLocationId  String?
+  fromLocation    Location? @relation("LocationFrom", fields: [fromLocationId], references: [id])
+  
+  toLocationId    String?
+  toLocation      Location? @relation("LocationTo", fields: [toLocationId], references: [id])
+
+  responsibleId   String?
+  responsible     User?    @relation(fields: [responsibleId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines           StockMoveLine[]
+}
+
+model StockMoveLine {
+  id          String    @id @default(cuid())
+  moveId      String
+  move        StockMove @relation(fields: [moveId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
