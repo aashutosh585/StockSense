@@ -6,12 +6,10 @@ import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import {
-  googleSignInAction,
   loginAction,
   type AuthActionState,
 } from "@/features/auth/actions/auth";
 import { Button } from "@/components/ui/button";
-import { GoogleButton } from "@/features/auth/components/google-button";
 
 const initialState: AuthActionState = {};
 
@@ -117,18 +115,6 @@ export function LoginForm() {
         ) : null}
 
         <SubmitButton />
-      </form>
-
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          or
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form action={googleSignInAction}>
-        <GoogleButton />
       </form>
     </div>
   );

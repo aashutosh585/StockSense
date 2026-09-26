@@ -52,9 +52,6 @@ export async function loginAction(_: AuthActionState, formData: FormData): Promi
   return {};
 }
 
-export async function googleSignInAction() {
-  await signIn("google", { redirectTo: "/dashboard" });
-}
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
